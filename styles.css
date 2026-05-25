@@ -61,7 +61,7 @@ body {
 
 .camera-stage {
   display: grid;
-  grid-template-rows: auto minmax(0, 1fr) auto auto;
+  grid-template-rows: minmax(0, 1fr) auto;
   gap: clamp(8px, 1.25vh, 15px);
   min-width: 0;
   min-height: 0;
@@ -97,18 +97,6 @@ body {
   stroke-width: 1.8;
 }
 
-.brand-bar {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  align-items: end;
-  gap: clamp(18px, 4vw, 42px);
-  padding-right: 74px;
-}
-
-.title-lockup {
-  min-width: 0;
-}
-
 .eyebrow {
   margin: 0 0 clamp(7px, 1vh, 12px);
   color: var(--rose);
@@ -119,29 +107,12 @@ body {
   text-transform: uppercase;
 }
 
-h1 {
-  margin: 0;
-  font-family: "Great Vibes", cursive;
-  font-size: clamp(3.7rem, 8.4vmin, 6.6rem);
-  font-weight: 400;
-  line-height: 1.02;
-}
-
-.date-mark {
-  max-width: 180px;
-  color: var(--sage);
-  font-family: "Cormorant Garamond", serif;
-  font-size: clamp(1.05rem, 2.25vmin, 1.55rem);
-  line-height: 1.14;
-  text-align: right;
-}
-
 .frame-wrap {
   position: relative;
   display: grid;
   align-self: center;
   justify-self: center;
-  width: min(100%, calc((100dvh - 320px) * 1.333));
+  width: min(100%, calc((100dvh - 105px) * 1.333));
   max-width: 100%;
   aspect-ratio: 4 / 3;
   min-height: 0;
@@ -162,13 +133,13 @@ video,
 
 .viewfinder-title {
   position: absolute;
-  right: clamp(18px, 3vmin, 34px);
-  bottom: clamp(18px, 3vmin, 34px);
+  left: clamp(18px, 3vmin, 34px);
+  top: clamp(18px, 3vmin, 34px);
   display: grid;
   gap: 2px;
   padding: 10px 14px;
   color: #fffdf9;
-  text-align: right;
+  text-align: left;
   text-shadow: 0 2px 12px rgba(0, 0, 0, 0.72);
   background: rgba(28, 26, 24, 0.42);
 }
@@ -245,9 +216,13 @@ video,
 }
 
 .capture-bar {
+  position: absolute;
+  right: clamp(16px, 3vmin, 32px);
+  bottom: clamp(16px, 3vmin, 32px);
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(150px, 0.28fr) minmax(150px, 0.28fr);
-  gap: clamp(10px, 1.6vw, 16px);
+  grid-template-columns: auto auto;
+  gap: 10px;
+  z-index: 2;
 }
 
 button,
@@ -257,7 +232,7 @@ input {
 }
 
 button {
-  min-height: 56px;
+  min-height: 52px;
   border: 0;
   cursor: pointer;
   font-weight: 800;
@@ -270,10 +245,11 @@ button:disabled {
 }
 
 .primary-button {
-  min-width: 0;
+  min-width: 150px;
   padding: 0 22px;
   color: white;
-  background: var(--rose);
+  background: rgba(186, 111, 114, 0.94);
+  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.22);
 }
 
 .secondary-button,
@@ -285,8 +261,10 @@ button:disabled {
 }
 
 .secondary-button {
-  min-width: 0;
+  min-width: 112px;
   padding: 0 16px;
+  background: rgba(255, 253, 249, 0.92);
+  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.14);
 }
 
 .stage-status {
@@ -298,6 +276,12 @@ button:disabled {
   line-height: 1.3;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.settings-action {
+  width: 100%;
+  margin-top: 18px;
+  box-shadow: none;
 }
 
 .settings-panel {
@@ -439,32 +423,18 @@ input {
     gap: clamp(12px, 1.4vh, 20px);
   }
 
-  .brand-bar {
-    grid-template-columns: 1fr;
-    gap: 6px;
-  }
-
-  h1 {
-    font-size: clamp(4rem, 9.5vmin, 6rem);
-  }
-
-  .date-mark {
-    max-width: none;
-    text-align: left;
-  }
-
   .capture-bar {
-    grid-template-columns: minmax(0, 1fr) minmax(132px, 0.32fr) minmax(132px, 0.32fr);
+    grid-template-columns: auto auto;
   }
 
   .frame-wrap {
-    width: min(100%, calc((100dvh - 280px) * 1.333));
+    width: min(100%, calc((100dvh - 115px) * 1.333));
   }
 }
 
 @media (orientation: landscape) {
   .frame-wrap {
-    width: min(100%, calc((100dvh - 355px) * 1.333));
+    width: min(100%, calc((100dvh - 115px) * 1.333));
   }
 }
 
@@ -484,16 +454,17 @@ input {
     height: 54px;
   }
 
-  .brand-bar {
-    padding-right: 62px;
-  }
-
-  h1 {
-    font-size: clamp(3.75rem, 12vmin, 5.8rem);
-  }
-
   .capture-bar {
-    grid-template-columns: 1fr;
+    right: 14px;
+    bottom: 14px;
+    grid-template-columns: auto auto;
+  }
+
+  .primary-button,
+  .secondary-button {
+    min-width: 104px;
+    min-height: 48px;
+    padding: 0 14px;
   }
 
   .control-panel {

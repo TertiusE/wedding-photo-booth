@@ -17,14 +17,6 @@
       </button>
 
       <section class="camera-stage" aria-label="Photo booth camera">
-        <div class="brand-bar">
-          <div class="title-lockup">
-            <p class="eyebrow">Wedding Photo Booth</p>
-            <h1>Natasha &amp; Tertius</h1>
-          </div>
-          <div class="date-mark">Love, laughter, forever</div>
-        </div>
-
         <div class="frame-wrap">
           <video id="cameraPreview" autoplay playsinline muted></video>
           <canvas id="captureCanvas" hidden></canvas>
@@ -37,12 +29,10 @@
           <div class="corner top-right"></div>
           <div class="corner bottom-left"></div>
           <div class="corner bottom-right"></div>
-        </div>
-
-        <div class="capture-bar">
-          <button id="captureButton" class="primary-button" type="button">Take Photo</button>
-          <button id="retakeButton" class="secondary-button" type="button" disabled>Retake</button>
-          <button id="openFolderButton" class="secondary-button" type="button" disabled>Open Folder</button>
+          <div class="capture-bar">
+            <button id="captureButton" class="primary-button" type="button">Take Photo</button>
+            <button id="retakeButton" class="secondary-button" type="button" disabled>Retake</button>
+          </div>
         </div>
 
         <p id="saveStatus" class="stage-status" aria-live="polite">No photos taken yet.</p>
@@ -82,6 +72,8 @@
             <input id="autoSave" type="checkbox" checked />
             <span>Automatically save every photo locally</span>
           </label>
+
+          <button id="openFolderButton" class="secondary-button settings-action" type="button" disabled>Open Downloads</button>
         </section>
 
         <section>
