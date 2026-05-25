@@ -19,6 +19,7 @@ const saveStatus = document.querySelector("#saveStatus");
 const openSettingsButton = document.querySelector("#openSettingsButton");
 const closeSettingsButton = document.querySelector("#closeSettingsButton");
 const settingsPanel = document.querySelector("#settingsPanel");
+const doneButton = document.querySelector("#doneButton");
 
 const settingsFields = [
   filenamePrefix,
@@ -34,6 +35,7 @@ let currentStream;
 let lastSavedDirectory;
 let lastCaptureDataUrl;
 const isDesktopApp = Boolean(window.photoBooth);
+let selectedCameraId = "";
 
 function openSettings() {
   settingsPanel.classList.add("is-open");
@@ -84,6 +86,7 @@ settingsFields.forEach((field) => {
 
 openSettingsButton.addEventListener("click", openSettings);
 closeSettingsButton.addEventListener("click", closeSettings);
+doneButton.addEventListener("click", openSettings);
 
 window.addEventListener("keydown", (event) => {
   if (event.key === "Escape") {
@@ -117,37 +120,109 @@ async function listCameras() {
     cameraSelect.appendChild(option);
   });
 
+  if (selectedCameraId && cameras.some((camera) => camera.deviceId === selectedCameraId)) {
+    cameraSelect.value = selectedCameraId;
+  }
+
   cameraStatus.textContent = cameras.length
     ? `${cameras.length} camera input${cameras.length === 1 ? "" : "s"} available.`
     : "No camera inputs found.";
 }
 
-async function startCamera(deviceId) {
-  if (!navigator.mediaDevices?.getUserMedia) {
-    throw new Error("Camera access needs Safari/Chrome over HTTPS.");
-  }
-
+function stopCurrentStream() {
   if (currentStream) {
     currentStream.getTracks().forEach((track) => track.stop());
   }
 
-  const constraints = {
-    audio: false,
-    video: {
-      deviceId: deviceId ? { exact: deviceId } : undefined,
-      width: { ideal: 1920 },
-      height: { ideal: 1080 }
+  currentStream = null;
+  cameraPreview.pause();
+  cameraPreview.srcObject = null;
+  cameraPreview.removeAttribute("src");
+  cameraPreview.load();
+}
+
+function waitForVideoMetadata() {
+  return new Promise((resolve, reject) => {
+    if (cameraPreview.videoWidth && cameraPreview.videoHeight) {
+      resolve();
+      return;
     }
-  };
 
-  currentStream = await navigator.mediaDevices.getUserMedia(constraints);
-  cameraPreview.srcObject = currentStream;
-  await cameraPreview.play();
-  await listCameras();
+    const timeout = window.setTimeout(() => {
+      cleanup();
+      reject(new Error("Timed out waiting for camera metadata."));
+    }, 5000);
 
-  if (deviceId) {
-    cameraSelect.value = deviceId;
+    function cleanup() {
+      window.clearTimeout(timeout);
+      cameraPreview.removeEventListener("loadedmetadata", handleLoaded);
+      cameraPreview.removeEventListener("error", handleError);
+    }
+
+    function handleLoaded() {
+      cleanup();
+      resolve();
+    }
+
+    function handleError() {
+      cleanup();
+      reject(new Error("Camera failed to load."));
+    }
+
+    cameraPreview.addEventListener("loadedmetadata", handleLoaded, { once: true });
+    cameraPreview.addEventListener("error", handleError, { once: true });
+  });
+}
+
+function applyCameraAspectRatio() {
+  const width = cameraPreview.videoWidth;
+  const height = cameraPreview.videoHeight;
+
+  if (!width || !height) {
+    return;
   }
+
+  document.documentElement.style.setProperty("--camera-ratio", String(width / height));
+}
+
+async function requestCameraStream(deviceId, useFallback = false) {
+  const video = useFallback
+    ? {
+        deviceId: deviceId ? { exact: deviceId } : undefined,
+        facingMode: deviceId ? undefined : "user"
+      }
+    : {
+        deviceId: deviceId ? { exact: deviceId } : undefined,
+        facingMode: deviceId ? undefined : "user",
+        width: { ideal: 1920 },
+        height: { ideal: 1080 }
+      };
+
+  return navigator.mediaDevices.getUserMedia({ audio: false, video });
+}
+
+async function startCamera(deviceId = "") {
+  if (!navigator.mediaDevices?.getUserMedia) {
+    throw new Error("Camera access needs Safari/Chrome over HTTPS.");
+  }
+
+  captureButton.disabled = true;
+  selectedCameraId = deviceId;
+  stopCurrentStream();
+
+  try {
+    currentStream = await requestCameraStream(deviceId);
+  } catch (error) {
+    currentStream = await requestCameraStream(deviceId, true);
+  }
+
+  cameraPreview.srcObject = currentStream;
+  await waitForVideoMetadata();
+  applyCameraAspectRatio();
+  await cameraPreview.play();
+  await sleep(500);
+  await listCameras();
+  captureButton.disabled = false;
 }
 
 function sleep(ms) {
@@ -180,18 +255,26 @@ function captureFrame() {
   const context = captureCanvas.getContext("2d");
   captureCanvas.width = width;
   captureCanvas.height = height;
+  context.imageSmoothingEnabled = true;
+  context.imageSmoothingQuality = "high";
   context.drawImage(cameraPreview, 0, 0, width, height);
 
+  const pad = Math.round(Math.min(width, height) * 0.045);
+  const titleSize = Math.round(Math.min(width, height) * 0.075);
+  const labelSize = Math.round(Math.min(width, height) * 0.018);
+
   context.save();
-  context.fillStyle = "rgba(255, 250, 244, 0.82)";
-  context.fillRect(0, height - 150, width, 150);
-  context.fillStyle = "#2d2823";
-  context.textAlign = "center";
-  context.font = `${Math.round(width * 0.05)}px serif`;
-  context.fillText("Natasha & Tertius", width / 2, height - 72);
-  context.fillStyle = "#ba6f72";
-  context.font = `${Math.round(width * 0.018)}px sans-serif`;
-  context.fillText("Wedding Photo Booth", width / 2, height - 36);
+  context.shadowColor = "rgba(0, 0, 0, 0.72)";
+  context.shadowBlur = Math.round(Math.min(width, height) * 0.018);
+  context.fillStyle = "#fffdf9";
+  context.textAlign = "left";
+  context.font = `${titleSize}px serif`;
+  context.fillText("Natasha & Tertius", pad, pad + titleSize);
+  context.shadowBlur = 0;
+  context.fillStyle = "rgba(255, 253, 249, 0.84)";
+  context.font = `800 ${labelSize}px sans-serif`;
+  context.letterSpacing = `${Math.max(1, Math.round(labelSize * 0.12))}px`;
+  context.fillText("WEDDING PHOTO BOOTH", pad, pad + titleSize + labelSize * 1.65);
   context.restore();
 
   return captureCanvas.toDataURL("image/png");
@@ -288,7 +371,7 @@ async function captureAndSave() {
 
     const outcomes = [];
 
-    if (autoSave.checked) {
+    if (autoSave.checked || !isDesktopApp) {
       const saved = await saveLocally(dataUrl);
       lastSavedDirectory = saved.directory;
       openFolderButton.disabled = !lastSavedDirectory;
@@ -341,10 +424,18 @@ chooseFolderButton.addEventListener("click", async () => {
 
 cameraSelect.addEventListener("change", async () => {
   try {
+    cameraStatus.textContent = "Switching camera...";
     await startCamera(cameraSelect.value);
+    cameraStatus.textContent = "Camera ready.";
   } catch (error) {
     cameraStatus.textContent = error.message;
+    captureButton.disabled = false;
   }
+});
+
+window.addEventListener("resize", applyCameraAspectRatio);
+window.addEventListener("orientationchange", () => {
+  window.setTimeout(applyCameraAspectRatio, 250);
 });
 
 window.addEventListener("beforeunload", () => {

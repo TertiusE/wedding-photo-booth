@@ -25,6 +25,7 @@
   --sage: #71806b;
   --border: rgba(113, 93, 71, 0.18);
   --shadow: 0 22px 60px rgba(60, 44, 30, 0.16);
+  --camera-ratio: 1.333;
 }
 
 * {
@@ -56,16 +57,16 @@ body {
   display: grid;
   width: 100vw;
   height: 100dvh;
-  padding: max(18px, env(safe-area-inset-top)) max(18px, env(safe-area-inset-right)) max(18px, env(safe-area-inset-bottom)) max(18px, env(safe-area-inset-left));
+  padding: max(10px, env(safe-area-inset-top)) max(10px, env(safe-area-inset-right)) max(10px, env(safe-area-inset-bottom)) max(10px, env(safe-area-inset-left));
 }
 
 .camera-stage {
   display: grid;
-  grid-template-rows: minmax(0, 1fr) auto;
-  gap: clamp(8px, 1.25vh, 15px);
+  grid-template-rows: minmax(0, 1fr) auto auto;
+  gap: clamp(8px, 1.4vh, 16px);
   min-width: 0;
   min-height: 0;
-  padding: clamp(20px, 3vmin, 34px);
+  padding: clamp(12px, 2.1vmin, 24px);
   border: 1px solid var(--border);
   background: var(--panel);
   box-shadow: var(--shadow);
@@ -74,8 +75,8 @@ body {
 .settings-button {
   position: absolute;
   z-index: 5;
-  top: max(30px, calc(env(safe-area-inset-top) + 20px));
-  right: max(30px, calc(env(safe-area-inset-right) + 20px));
+  top: max(22px, calc(env(safe-area-inset-top) + 14px));
+  right: max(22px, calc(env(safe-area-inset-right) + 14px));
   display: grid;
   width: 58px;
   height: 58px;
@@ -112,13 +113,14 @@ body {
   display: grid;
   align-self: center;
   justify-self: center;
-  width: min(100%, calc((100dvh - 105px) * 1.333));
+  width: min(100%, calc((100dvh - 135px) * var(--camera-ratio)));
   max-width: 100%;
-  aspect-ratio: 4 / 3;
+  max-height: 100%;
+  aspect-ratio: var(--camera-ratio);
   min-height: 0;
   place-items: center;
   overflow: hidden;
-  border: clamp(7px, 1.4vmin, 12px) solid #fffdf9;
+  border: clamp(6px, 1vmin, 10px) solid #fffdf9;
   outline: 1px solid rgba(215, 185, 141, 0.7);
   background: #1c1a18;
 }
@@ -137,16 +139,17 @@ video,
   top: clamp(18px, 3vmin, 34px);
   display: grid;
   gap: 2px;
-  padding: 10px 14px;
+  padding: 8px 12px;
   color: #fffdf9;
   text-align: left;
   text-shadow: 0 2px 12px rgba(0, 0, 0, 0.72);
-  background: rgba(28, 26, 24, 0.42);
+  background: rgba(255, 255, 255, 0.16);
+  backdrop-filter: blur(8px);
 }
 
 .viewfinder-title span {
   font-family: "Great Vibes", cursive;
-  font-size: clamp(2.15rem, 5.2vmin, 4rem);
+  font-size: clamp(1.9rem, 4.4vmin, 3.35rem);
   line-height: 0.9;
 }
 
@@ -158,40 +161,60 @@ video,
   text-transform: uppercase;
 }
 
+.framing-guide {
+  position: absolute;
+  pointer-events: none;
+  opacity: 0.22;
+}
+
+.framing-guide.vertical {
+  top: 14%;
+  bottom: 14%;
+  left: 50%;
+  border-left: 1px solid rgba(255, 253, 249, 0.7);
+}
+
+.framing-guide.horizontal {
+  right: 14%;
+  left: 14%;
+  top: 50%;
+  border-top: 1px solid rgba(255, 253, 249, 0.7);
+}
+
 .corner {
   position: absolute;
-  width: clamp(42px, 8vmin, 82px);
-  height: clamp(42px, 8vmin, 82px);
+  width: clamp(44px, 6.5vmin, 76px);
+  height: clamp(44px, 6.5vmin, 76px);
   border-color: var(--champagne);
   opacity: 0.9;
 }
 
 .top-left {
-  top: 18px;
-  left: 18px;
-  border-top: 3px solid;
-  border-left: 3px solid;
+  top: 24px;
+  left: 24px;
+  border-top: 2px solid;
+  border-left: 2px solid;
 }
 
 .top-right {
-  top: 18px;
-  right: 18px;
-  border-top: 3px solid;
-  border-right: 3px solid;
+  top: 24px;
+  right: 24px;
+  border-top: 2px solid;
+  border-right: 2px solid;
 }
 
 .bottom-left {
-  bottom: 18px;
-  left: 18px;
-  border-bottom: 3px solid;
-  border-left: 3px solid;
+  bottom: 24px;
+  left: 24px;
+  border-bottom: 2px solid;
+  border-left: 2px solid;
 }
 
 .bottom-right {
-  right: 18px;
-  bottom: 18px;
-  border-right: 3px solid;
-  border-bottom: 3px solid;
+  right: 24px;
+  bottom: 24px;
+  border-right: 2px solid;
+  border-bottom: 2px solid;
 }
 
 .countdown {
@@ -216,13 +239,12 @@ video,
 }
 
 .capture-bar {
-  position: absolute;
-  right: clamp(16px, 3vmin, 32px);
-  bottom: clamp(16px, 3vmin, 32px);
   display: grid;
-  grid-template-columns: auto auto;
-  gap: 10px;
-  z-index: 2;
+  grid-template-columns: minmax(104px, 1fr) auto minmax(104px, 1fr);
+  align-items: center;
+  justify-self: center;
+  width: min(460px, 100%);
+  gap: 16px;
 }
 
 button,
@@ -232,7 +254,7 @@ input {
 }
 
 button {
-  min-height: 52px;
+  min-height: 48px;
   border: 0;
   cursor: pointer;
   font-weight: 800;
@@ -244,14 +266,6 @@ button:disabled {
   opacity: 0.45;
 }
 
-.primary-button {
-  min-width: 150px;
-  padding: 0 22px;
-  color: white;
-  background: rgba(186, 111, 114, 0.94);
-  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.22);
-}
-
 .secondary-button,
 .icon-button,
 .close-button {
@@ -261,10 +275,29 @@ button:disabled {
 }
 
 .secondary-button {
-  min-width: 112px;
+  min-width: 104px;
   padding: 0 16px;
-  background: rgba(255, 253, 249, 0.92);
-  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.14);
+  background: #fffdf9;
+}
+
+.shutter-button {
+  display: grid;
+  width: clamp(78px, 9vmin, 92px);
+  height: clamp(78px, 9vmin, 92px);
+  min-height: 0;
+  place-items: center;
+  border: 5px solid #fffdf9;
+  border-radius: 999px;
+  background: var(--rose);
+  box-shadow: 0 16px 34px rgba(60, 44, 30, 0.28);
+}
+
+.shutter-button span {
+  width: 64%;
+  height: 64%;
+  border: 2px solid rgba(255, 255, 255, 0.72);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.16);
 }
 
 .stage-status {
@@ -424,17 +457,13 @@ input {
   }
 
   .capture-bar {
-    grid-template-columns: auto auto;
-  }
-
-  .frame-wrap {
-    width: min(100%, calc((100dvh - 115px) * 1.333));
+    width: min(440px, 100%);
   }
 }
 
 @media (orientation: landscape) {
   .frame-wrap {
-    width: min(100%, calc((100dvh - 115px) * 1.333));
+    width: min(100%, calc((100dvh - 135px) * var(--camera-ratio)));
   }
 }
 
@@ -444,7 +473,7 @@ input {
   }
 
   .camera-stage {
-    padding: 18px;
+    padding: 12px;
   }
 
   .settings-button {
@@ -455,16 +484,14 @@ input {
   }
 
   .capture-bar {
-    right: 14px;
-    bottom: 14px;
-    grid-template-columns: auto auto;
+    grid-template-columns: minmax(92px, 1fr) auto minmax(92px, 1fr);
+    gap: 12px;
   }
 
-  .primary-button,
   .secondary-button {
-    min-width: 104px;
+    min-width: 92px;
     min-height: 48px;
-    padding: 0 14px;
+    padding: 0 12px;
   }
 
   .control-panel {

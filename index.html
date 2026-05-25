@@ -24,15 +24,21 @@
             <span>Natasha &amp; Tertius</span>
             <small>Wedding Photo Booth</small>
           </div>
+          <div class="framing-guide vertical" aria-hidden="true"></div>
+          <div class="framing-guide horizontal" aria-hidden="true"></div>
           <div id="countdown" class="countdown" aria-live="polite"></div>
           <div class="corner top-left"></div>
           <div class="corner top-right"></div>
           <div class="corner bottom-left"></div>
           <div class="corner bottom-right"></div>
-          <div class="capture-bar">
-            <button id="captureButton" class="primary-button" type="button">Take Photo</button>
-            <button id="retakeButton" class="secondary-button" type="button" disabled>Retake</button>
-          </div>
+        </div>
+
+        <div class="capture-bar">
+          <button id="retakeButton" class="secondary-button" type="button" disabled>Retake</button>
+          <button id="captureButton" class="shutter-button" type="button" aria-label="Take photo">
+            <span></span>
+          </button>
+          <button id="doneButton" class="secondary-button" type="button">Done</button>
         </div>
 
         <p id="saveStatus" class="stage-status" aria-live="polite">No photos taken yet.</p>
