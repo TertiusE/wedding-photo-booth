@@ -56,14 +56,13 @@ body {
   display: grid;
   width: 100vw;
   height: 100dvh;
-  min-height: 620px;
   padding: max(18px, env(safe-area-inset-top)) max(18px, env(safe-area-inset-right)) max(18px, env(safe-area-inset-bottom)) max(18px, env(safe-area-inset-left));
 }
 
 .camera-stage {
   display: grid;
   grid-template-rows: auto minmax(0, 1fr) auto auto;
-  gap: clamp(10px, 1.5vh, 18px);
+  gap: clamp(8px, 1.25vh, 15px);
   min-width: 0;
   min-height: 0;
   padding: clamp(20px, 3vmin, 34px);
@@ -123,7 +122,7 @@ body {
 h1 {
   margin: 0;
   font-family: "Great Vibes", cursive;
-  font-size: clamp(4rem, 9.2vmin, 7.2rem);
+  font-size: clamp(3.7rem, 8.4vmin, 6.6rem);
   font-weight: 400;
   line-height: 1.02;
 }
@@ -140,6 +139,11 @@ h1 {
 .frame-wrap {
   position: relative;
   display: grid;
+  align-self: center;
+  justify-self: center;
+  width: min(100%, calc((100dvh - 320px) * 1.333));
+  max-width: 100%;
+  aspect-ratio: 4 / 3;
   min-height: 0;
   place-items: center;
   overflow: hidden;
@@ -153,7 +157,34 @@ video,
   display: block;
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  object-fit: contain;
+}
+
+.viewfinder-title {
+  position: absolute;
+  right: clamp(18px, 3vmin, 34px);
+  bottom: clamp(18px, 3vmin, 34px);
+  display: grid;
+  gap: 2px;
+  padding: 10px 14px;
+  color: #fffdf9;
+  text-align: right;
+  text-shadow: 0 2px 12px rgba(0, 0, 0, 0.72);
+  background: rgba(28, 26, 24, 0.42);
+}
+
+.viewfinder-title span {
+  font-family: "Great Vibes", cursive;
+  font-size: clamp(2.15rem, 5.2vmin, 4rem);
+  line-height: 0.9;
+}
+
+.viewfinder-title small {
+  color: rgba(255, 253, 249, 0.84);
+  font-size: clamp(0.62rem, 1.35vmin, 0.86rem);
+  font-weight: 800;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
 }
 
 .corner {
@@ -404,10 +435,6 @@ input {
 }
 
 @media (orientation: portrait) {
-  .app-shell {
-    min-height: 900px;
-  }
-
   .camera-stage {
     gap: clamp(12px, 1.4vh, 20px);
   }
@@ -418,7 +445,7 @@ input {
   }
 
   h1 {
-    font-size: clamp(4.4rem, 11vmin, 6.6rem);
+    font-size: clamp(4rem, 9.5vmin, 6rem);
   }
 
   .date-mark {
@@ -428,6 +455,16 @@ input {
 
   .capture-bar {
     grid-template-columns: minmax(0, 1fr) minmax(132px, 0.32fr) minmax(132px, 0.32fr);
+  }
+
+  .frame-wrap {
+    width: min(100%, calc((100dvh - 280px) * 1.333));
+  }
+}
+
+@media (orientation: landscape) {
+  .frame-wrap {
+    width: min(100%, calc((100dvh - 355px) * 1.333));
   }
 }
 
