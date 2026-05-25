@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self' https://www.googleapis.com https://accounts.google.com; img-src 'self' data:; media-src 'self' blob:; script-src 'self'; style-src 'self' 'unsafe-inline'; connect-src 'self' https://www.googleapis.com;" />
+    <title>Natasha & Tertius Photo Booth</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <main class="app-shell">
+      <section class="camera-stage" aria-label="Photo booth camera">
+        <div class="brand-bar">
+          <div class="title-lockup">
+            <p class="eyebrow">Wedding Photo Booth</p>
+            <h1>Natasha &amp; Tertius</h1>
+          </div>
+          <div class="date-mark">Love, laughter, forever</div>
+        </div>
+
+        <div class="frame-wrap">
+          <video id="cameraPreview" autoplay playsinline muted></video>
+          <canvas id="captureCanvas" hidden></canvas>
+          <div id="countdown" class="countdown" aria-live="polite"></div>
+          <div class="corner top-left"></div>
+          <div class="corner top-right"></div>
+          <div class="corner bottom-left"></div>
+          <div class="corner bottom-right"></div>
+        </div>
+
+        <div class="capture-bar">
+          <button id="captureButton" class="primary-button" type="button">Take Photo</button>
+          <button id="retakeButton" class="secondary-button" type="button" disabled>Retake</button>
+          <button id="openFolderButton" class="secondary-button" type="button" disabled>Open Folder</button>
+        </div>
+      </section>
+
+      <aside class="control-panel" aria-label="Photo booth settings">
+        <section>
+          <h2>Camera</h2>
+          <label for="cameraSelect">Input</label>
+          <select id="cameraSelect"></select>
+          <p id="cameraStatus" class="status-text">Waiting for camera permission.</p>
+        </section>
+
+        <section>
+          <h2>Saving</h2>
+          <label for="filenamePrefix">File prefix</label>
+          <input id="filenamePrefix" type="text" value="natasha-tertius-wedding" />
+
+          <label for="saveFolder">Optional custom folder</label>
+          <div class="folder-row">
+            <input id="saveFolder" type="text" placeholder="Default: Pictures/Natasha-Tertius-Photo-Booth" readonly />
+            <button id="chooseFolderButton" class="icon-button" type="button" title="Choose folder">...</button>
+          </div>
+
+          <label class="toggle-row">
+            <input id="autoSave" type="checkbox" checked />
+            <span>Automatically save every photo locally</span>
+          </label>
+        </section>
+
+        <section>
+          <h2>Google Drive</h2>
+          <label class="toggle-row">
+            <input id="driveEnabled" type="checkbox" />
+            <span>Upload after capture when configured</span>
+          </label>
+
+          <label for="driveFolderId">Drive folder ID</label>
+          <input id="driveFolderId" type="text" placeholder="Paste folder ID later" />
+
+          <label for="driveApiKey">API key</label>
+          <input id="driveApiKey" type="password" placeholder="Configure later" />
+
+          <label for="driveAccessToken">OAuth access token</label>
+          <input id="driveAccessToken" type="password" placeholder="Required for uploads" />
+
+          <p class="hint">Google Drive upload is ready for later configuration. A private Drive upload requires OAuth access, not just an API key.</p>
+        </section>
+
+        <section>
+          <h2>Last Photo</h2>
+          <img id="lastPhoto" class="last-photo" alt="Most recent capture preview" />
+          <p id="saveStatus" class="status-text">No photos taken yet.</p>
+        </section>
+      </aside>
+    </main>
+
+    <script src="./renderer.js"></script>
+  </body>
+</html>
