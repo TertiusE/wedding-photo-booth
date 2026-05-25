@@ -38,7 +38,12 @@
           <button id="captureButton" class="shutter-button" type="button" aria-label="Take photo">
             <span></span>
           </button>
-          <button id="doneButton" class="secondary-button" type="button">Done</button>
+          <button id="doneButton" class="secondary-button" type="button">Reset</button>
+        </div>
+
+        <div class="mode-bar" role="group" aria-label="Capture mode">
+          <button id="singleModeButton" class="mode-button is-active" type="button" data-mode="single">Single</button>
+          <button id="stripModeButton" class="mode-button" type="button" data-mode="strip">3-Shot Strip</button>
         </div>
 
         <p id="saveStatus" class="stage-status" aria-live="polite">No photos taken yet.</p>
@@ -61,6 +66,22 @@
           <label for="cameraSelect">Input</label>
           <select id="cameraSelect"></select>
           <p id="cameraStatus" class="status-text">Waiting for camera permission.</p>
+        </section>
+
+        <section>
+          <h2>Kiosk</h2>
+          <label class="toggle-row">
+            <input id="kioskMode" type="checkbox" checked />
+            <span>Require PIN before opening settings</span>
+          </label>
+
+          <label for="settingsPin">Settings PIN</label>
+          <input id="settingsPin" type="password" inputmode="numeric" value="1024" />
+
+          <label for="idleResetSeconds">Idle reset seconds</label>
+          <input id="idleResetSeconds" type="number" min="0" step="5" value="45" />
+
+          <p class="hint">Space or Enter triggers capture. Reset clears the guest screen without changing settings.</p>
         </section>
 
         <section>

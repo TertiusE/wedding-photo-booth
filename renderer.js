@@ -20,6 +20,11 @@ const openSettingsButton = document.querySelector("#openSettingsButton");
 const closeSettingsButton = document.querySelector("#closeSettingsButton");
 const settingsPanel = document.querySelector("#settingsPanel");
 const doneButton = document.querySelector("#doneButton");
+const singleModeButton = document.querySelector("#singleModeButton");
+const stripModeButton = document.querySelector("#stripModeButton");
+const kioskMode = document.querySelector("#kioskMode");
+const settingsPin = document.querySelector("#settingsPin");
+const idleResetSeconds = document.querySelector("#idleResetSeconds");
 
 const settingsFields = [
   filenamePrefix,
@@ -28,7 +33,10 @@ const settingsFields = [
   driveEnabled,
   driveFolderId,
   driveApiKey,
-  driveAccessToken
+  driveAccessToken,
+  kioskMode,
+  settingsPin,
+  idleResetSeconds
 ];
 
 let currentStream;
@@ -36,8 +44,35 @@ let lastSavedDirectory;
 let lastCaptureDataUrl;
 const isDesktopApp = Boolean(window.photoBooth);
 let selectedCameraId = "";
+let captureMode = "single";
+let idleResetTimer;
+
+function getSettings() {
+  return JSON.parse(localStorage.getItem("photoBoothSettings") || "{}");
+}
+
+function settingsRequirePin() {
+  const saved = getSettings();
+  return saved.kioskMode !== false && Boolean(saved.settingsPin || "1024");
+}
+
+function requestSettingsAccess() {
+  if (!settingsRequirePin() || settingsPanel.classList.contains("is-open")) {
+    return true;
+  }
+
+  const saved = getSettings();
+  const expectedPin = saved.settingsPin || "1024";
+  const enteredPin = window.prompt("Settings PIN");
+  return enteredPin === expectedPin;
+}
 
 function openSettings() {
+  if (!requestSettingsAccess()) {
+    saveStatus.textContent = "Settings are locked for kiosk mode.";
+    return;
+  }
+
   settingsPanel.classList.add("is-open");
   settingsPanel.setAttribute("aria-hidden", "false");
   if (window.location.hash !== "#settings") {
@@ -54,7 +89,7 @@ function closeSettings() {
 }
 
 function loadSettings() {
-  const saved = JSON.parse(localStorage.getItem("photoBoothSettings") || "{}");
+  const saved = getSettings();
   filenamePrefix.value = saved.filenamePrefix || "natasha-tertius-wedding";
   saveFolder.value = saved.saveFolder || "";
   autoSave.checked = saved.autoSave !== false;
@@ -62,6 +97,9 @@ function loadSettings() {
   driveFolderId.value = saved.driveFolderId || "";
   driveApiKey.value = saved.driveApiKey || "";
   driveAccessToken.value = saved.driveAccessToken || "";
+  kioskMode.checked = saved.kioskMode !== false;
+  settingsPin.value = saved.settingsPin || "1024";
+  idleResetSeconds.value = String(saved.idleResetSeconds ?? 45);
 }
 
 function persistSettings() {
@@ -74,7 +112,10 @@ function persistSettings() {
       driveEnabled: driveEnabled.checked,
       driveFolderId: driveFolderId.value,
       driveApiKey: driveApiKey.value,
-      driveAccessToken: driveAccessToken.value
+      driveAccessToken: driveAccessToken.value,
+      kioskMode: kioskMode.checked,
+      settingsPin: settingsPin.value,
+      idleResetSeconds: Number(idleResetSeconds.value) || 0
     })
   );
 }
@@ -86,11 +127,27 @@ settingsFields.forEach((field) => {
 
 openSettingsButton.addEventListener("click", openSettings);
 closeSettingsButton.addEventListener("click", closeSettings);
-doneButton.addEventListener("click", openSettings);
+doneButton.addEventListener("click", resetGuestScreen);
 
 window.addEventListener("keydown", (event) => {
+  const target = event.target;
+  const isTyping = target instanceof HTMLElement && ["INPUT", "SELECT", "TEXTAREA", "BUTTON"].includes(target.tagName);
+
   if (event.key === "Escape") {
     closeSettings();
+  }
+
+  if (isTyping || settingsPanel.classList.contains("is-open")) {
+    return;
+  }
+
+  if ((event.key === " " || event.key === "Enter") && !captureButton.disabled) {
+    event.preventDefault();
+    captureAndSave();
+  }
+
+  if (event.key.toLowerCase() === "s") {
+    openSettings();
   }
 });
 
@@ -243,6 +300,26 @@ async function runCountdown() {
   countdown.textContent = "";
 }
 
+function resetIdleTimer() {
+  window.clearTimeout(idleResetTimer);
+
+  const seconds = Number(idleResetSeconds.value) || 0;
+  if (!seconds) {
+    return;
+  }
+
+  idleResetTimer = window.setTimeout(resetGuestScreen, seconds * 1000);
+}
+
+function resetGuestScreen() {
+  window.clearTimeout(idleResetTimer);
+  lastCaptureDataUrl = null;
+  lastPhoto.removeAttribute("src");
+  lastPhoto.classList.remove("has-photo");
+  retakeButton.disabled = true;
+  saveStatus.textContent = "Ready for another photo.";
+}
+
 function renderPhotoFrame(dataUrl) {
   lastPhoto.src = dataUrl;
   lastPhoto.classList.add("has-photo");
@@ -276,6 +353,69 @@ function captureFrame() {
   context.letterSpacing = `${Math.max(1, Math.round(labelSize * 0.12))}px`;
   context.fillText("WEDDING PHOTO BOOTH", pad, pad + titleSize + labelSize * 1.65);
   context.restore();
+
+  return captureCanvas.toDataURL("image/png");
+}
+
+function drawPhotoFrame(context, dataUrl, x, y, width, height) {
+  return new Promise((resolve, reject) => {
+    const image = new Image();
+    image.onload = () => {
+      context.drawImage(image, x, y, width, height);
+      resolve();
+    };
+    image.onerror = reject;
+    image.src = dataUrl;
+  });
+}
+
+async function captureStrip() {
+  const frames = [];
+
+  for (let index = 0; index < 3; index += 1) {
+    saveStatus.textContent = `Shot ${index + 1} of 3...`;
+    await runCountdown();
+    frames.push(captureFrame());
+    await sleep(350);
+  }
+
+  const sourceWidth = cameraPreview.videoWidth || 1920;
+  const sourceHeight = cameraPreview.videoHeight || 1080;
+  const stripWidth = 1400;
+  const stripHeight = 2400;
+  const margin = 90;
+  const gap = 48;
+  const labelHeight = 190;
+  const photoWidth = stripWidth - margin * 2;
+  const photoHeight = Math.round((stripHeight - margin * 2 - gap * 2 - labelHeight) / 3);
+  const context = captureCanvas.getContext("2d");
+
+  captureCanvas.width = stripWidth;
+  captureCanvas.height = stripHeight;
+  context.fillStyle = "#fffdf9";
+  context.fillRect(0, 0, stripWidth, stripHeight);
+
+  for (let index = 0; index < frames.length; index += 1) {
+    const y = margin + index * (photoHeight + gap);
+    context.save();
+    context.beginPath();
+    context.rect(margin, y, photoWidth, photoHeight);
+    context.clip();
+
+    const scale = Math.max(photoWidth / sourceWidth, photoHeight / sourceHeight);
+    const drawWidth = sourceWidth * scale;
+    const drawHeight = sourceHeight * scale;
+    await drawPhotoFrame(context, frames[index], margin + (photoWidth - drawWidth) / 2, y + (photoHeight - drawHeight) / 2, drawWidth, drawHeight);
+    context.restore();
+  }
+
+  context.fillStyle = "#2d2823";
+  context.textAlign = "center";
+  context.font = "92px serif";
+  context.fillText("Natasha & Tertius", stripWidth / 2, stripHeight - 100);
+  context.fillStyle = "#756c64";
+  context.font = "800 28px sans-serif";
+  context.fillText("WEDDING PHOTO BOOTH", stripWidth / 2, stripHeight - 54);
 
   return captureCanvas.toDataURL("image/png");
 }
@@ -364,8 +504,7 @@ async function captureAndSave() {
   saveStatus.textContent = "Getting ready...";
 
   try {
-    await runCountdown();
-    const dataUrl = captureFrame();
+    const dataUrl = captureMode === "strip" ? await captureStrip() : await captureSingle();
     lastCaptureDataUrl = dataUrl;
     renderPhotoFrame(dataUrl);
 
@@ -386,6 +525,7 @@ async function captureAndSave() {
     }
 
     saveStatus.textContent = outcomes.join(" ");
+    resetIdleTimer();
   } catch (error) {
     saveStatus.textContent = error.message;
   } finally {
@@ -395,13 +535,21 @@ async function captureAndSave() {
 
 captureButton.addEventListener("click", captureAndSave);
 
-retakeButton.addEventListener("click", () => {
-  lastCaptureDataUrl = null;
-  lastPhoto.removeAttribute("src");
-  lastPhoto.classList.remove("has-photo");
-  retakeButton.disabled = true;
-  saveStatus.textContent = "Ready for another photo.";
-});
+async function captureSingle() {
+  await runCountdown();
+  return captureFrame();
+}
+
+function setCaptureMode(mode) {
+  captureMode = mode;
+  singleModeButton.classList.toggle("is-active", mode === "single");
+  stripModeButton.classList.toggle("is-active", mode === "strip");
+}
+
+singleModeButton.addEventListener("click", () => setCaptureMode("single"));
+stripModeButton.addEventListener("click", () => setCaptureMode("strip"));
+
+retakeButton.addEventListener("click", resetGuestScreen);
 
 openFolderButton.addEventListener("click", async () => {
   if (lastSavedDirectory && isDesktopApp) {
