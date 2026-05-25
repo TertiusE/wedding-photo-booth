@@ -9,6 +9,13 @@
   </head>
   <body>
     <main class="app-shell">
+      <button id="openSettingsButton" class="settings-button" type="button" aria-label="Open settings">
+        <svg aria-hidden="true" viewBox="0 0 24 24">
+          <path d="M12 15.5A3.5 3.5 0 1 0 12 8a3.5 3.5 0 0 0 0 7.5Z"></path>
+          <path d="M19.4 15a1.7 1.7 0 0 0 .34 1.88l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.7 1.7 0 0 0-1.88-.34 1.7 1.7 0 0 0-1.03 1.56V21a2 2 0 0 1-4 0v-.09a1.7 1.7 0 0 0-1.03-1.56 1.7 1.7 0 0 0-1.88.34l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.7 1.7 0 0 0 4.6 15a1.7 1.7 0 0 0-1.56-1.03H3a2 2 0 0 1 0-4h.09A1.7 1.7 0 0 0 4.65 8.9a1.7 1.7 0 0 0-.34-1.88l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06a1.7 1.7 0 0 0 1.88.34H9a1.7 1.7 0 0 0 1-1.56V3a2 2 0 0 1 4 0v.09a1.7 1.7 0 0 0 1.03 1.56 1.7 1.7 0 0 0 1.88-.34l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06a1.7 1.7 0 0 0-.34 1.88V9a1.7 1.7 0 0 0 1.56 1H21a2 2 0 0 1 0 4h-.09A1.7 1.7 0 0 0 19.4 15Z"></path>
+        </svg>
+      </button>
+
       <section class="camera-stage" aria-label="Photo booth camera">
         <div class="brand-bar">
           <div class="title-lockup">
@@ -33,9 +40,22 @@
           <button id="retakeButton" class="secondary-button" type="button" disabled>Retake</button>
           <button id="openFolderButton" class="secondary-button" type="button" disabled>Open Folder</button>
         </div>
-      </section>
 
-      <aside class="control-panel" aria-label="Photo booth settings">
+        <p id="saveStatus" class="stage-status" aria-live="polite">No photos taken yet.</p>
+      </section>
+    </main>
+
+    <aside id="settingsPanel" class="settings-panel" aria-label="Photo booth settings" aria-hidden="true">
+      <div class="settings-page">
+        <div class="settings-header">
+          <div>
+            <p class="eyebrow">Photo Booth</p>
+            <h2>Settings</h2>
+          </div>
+          <button id="closeSettingsButton" class="close-button" type="button">Done</button>
+        </div>
+
+        <div class="control-panel">
         <section>
           <h2>Camera</h2>
           <label for="cameraSelect">Input</label>
@@ -82,10 +102,10 @@
         <section>
           <h2>Last Photo</h2>
           <img id="lastPhoto" class="last-photo" alt="Most recent capture preview" />
-          <p id="saveStatus" class="status-text">No photos taken yet.</p>
         </section>
-      </aside>
-    </main>
+        </div>
+      </div>
+    </aside>
 
     <script src="./renderer.js"></script>
   </body>

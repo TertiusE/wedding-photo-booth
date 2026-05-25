@@ -16,6 +16,9 @@ const driveApiKey = document.querySelector("#driveApiKey");
 const driveAccessToken = document.querySelector("#driveAccessToken");
 const lastPhoto = document.querySelector("#lastPhoto");
 const saveStatus = document.querySelector("#saveStatus");
+const openSettingsButton = document.querySelector("#openSettingsButton");
+const closeSettingsButton = document.querySelector("#closeSettingsButton");
+const settingsPanel = document.querySelector("#settingsPanel");
 
 const settingsFields = [
   filenamePrefix,
@@ -31,6 +34,22 @@ let currentStream;
 let lastSavedDirectory;
 let lastCaptureDataUrl;
 const isDesktopApp = Boolean(window.photoBooth);
+
+function openSettings() {
+  settingsPanel.classList.add("is-open");
+  settingsPanel.setAttribute("aria-hidden", "false");
+  if (window.location.hash !== "#settings") {
+    history.replaceState(null, "", "#settings");
+  }
+}
+
+function closeSettings() {
+  settingsPanel.classList.remove("is-open");
+  settingsPanel.setAttribute("aria-hidden", "true");
+  if (window.location.hash === "#settings") {
+    history.replaceState(null, "", window.location.pathname + window.location.search);
+  }
+}
 
 function loadSettings() {
   const saved = JSON.parse(localStorage.getItem("photoBoothSettings") || "{}");
@@ -61,6 +80,23 @@ function persistSettings() {
 settingsFields.forEach((field) => {
   field.addEventListener("input", persistSettings);
   field.addEventListener("change", persistSettings);
+});
+
+openSettingsButton.addEventListener("click", openSettings);
+closeSettingsButton.addEventListener("click", closeSettings);
+
+window.addEventListener("keydown", (event) => {
+  if (event.key === "Escape") {
+    closeSettings();
+  }
+});
+
+window.addEventListener("hashchange", () => {
+  if (window.location.hash === "#settings") {
+    openSettings();
+  } else {
+    closeSettings();
+  }
 });
 
 async function listCameras() {
@@ -318,6 +354,10 @@ window.addEventListener("beforeunload", () => {
 });
 
 loadSettings();
+
+if (window.location.hash === "#settings") {
+  openSettings();
+}
 
 if (!isDesktopApp) {
   saveFolder.placeholder = "iPad/browser download location";
