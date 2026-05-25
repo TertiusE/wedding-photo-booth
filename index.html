@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self' https://www.googleapis.com https://accounts.google.com; img-src 'self' data:; media-src 'self' blob:; script-src 'self'; style-src 'self' 'unsafe-inline'; connect-src 'self' https://www.googleapis.com;" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self' https://www.googleapis.com https://accounts.google.com; img-src 'self' data:; media-src 'self' blob:; script-src 'self'; style-src 'self' 'unsafe-inline'; connect-src 'self' https://www.googleapis.com; worker-src 'self' blob:;" />
     <title>Natasha & Tertius Photo Booth</title>
     <link rel="stylesheet" href="./styles.css" />
   </head>
@@ -85,15 +85,42 @@
         </section>
 
         <section>
+          <h2>Guest Display</h2>
+          <label for="countdownSeconds">Countdown seconds</label>
+          <input id="countdownSeconds" type="number" min="1" max="10" step="1" value="3" />
+
+          <label class="toggle-row">
+            <input id="mirrorPreview" type="checkbox" />
+            <span>Mirror live camera preview</span>
+          </label>
+
+          <label class="toggle-row">
+            <input id="showBrandOverlay" type="checkbox" checked />
+            <span>Show names on the live view</span>
+          </label>
+
+          <label class="toggle-row">
+            <input id="showFramingGuides" type="checkbox" checked />
+            <span>Show framing guides</span>
+          </label>
+
+          <label class="toggle-row">
+            <input id="screenFlash" type="checkbox" checked />
+            <span>Flash the screen after capture</span>
+          </label>
+        </section>
+
+        <section>
           <h2>Saving</h2>
           <label for="filenamePrefix">File prefix</label>
           <input id="filenamePrefix" type="text" value="natasha-tertius-wedding" />
 
-          <label for="saveFolder">Optional custom folder</label>
+          <label for="saveFolder">Save location</label>
           <div class="folder-row">
             <input id="saveFolder" type="text" placeholder="Default: Pictures/Natasha-Tertius-Photo-Booth" readonly />
             <button id="chooseFolderButton" class="icon-button" type="button" title="Choose folder">...</button>
           </div>
+          <p id="folderStatus" class="status-text">Photos save to Downloads in browsers unless a Chrome folder is selected.</p>
 
           <label class="toggle-row">
             <input id="autoSave" type="checkbox" checked />

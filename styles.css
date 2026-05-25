@@ -133,6 +133,10 @@ video,
   object-fit: contain;
 }
 
+body.mirror-preview #cameraPreview {
+  transform: scaleX(-1);
+}
+
 .viewfinder-title {
   position: absolute;
   left: clamp(18px, 3vmin, 34px);
@@ -159,6 +163,28 @@ video,
   font-weight: 800;
   letter-spacing: 0.13em;
   text-transform: uppercase;
+}
+
+body.hide-brand-overlay .viewfinder-title,
+body.hide-framing-guides .framing-guide,
+body.hide-framing-guides .corner {
+  display: none;
+}
+
+body::after {
+  position: fixed;
+  z-index: 20;
+  inset: 0;
+  pointer-events: none;
+  content: "";
+  opacity: 0;
+  background: white;
+  transition: opacity 160ms ease;
+}
+
+body.screen-flash::after {
+  opacity: 0.82;
+  transition: none;
 }
 
 .framing-guide {

@@ -25,6 +25,16 @@ const stripModeButton = document.querySelector("#stripModeButton");
 const kioskMode = document.querySelector("#kioskMode");
 const settingsPin = document.querySelector("#settingsPin");
 const idleResetSeconds = document.querySelector("#idleResetSeconds");
+const countdownSeconds = document.querySelector("#countdownSeconds");
+const mirrorPreview = document.querySelector("#mirrorPreview");
+const showBrandOverlay = document.querySelector("#showBrandOverlay");
+const showFramingGuides = document.querySelector("#showFramingGuides");
+const screenFlash = document.querySelector("#screenFlash");
+const folderStatus = document.querySelector("#folderStatus");
+
+const browserStorageDbName = "photoBoothStorage";
+const browserStorageStoreName = "handles";
+const browserFolderKey = "browserSaveFolder";
 
 const settingsFields = [
   filenamePrefix,
@@ -36,7 +46,12 @@ const settingsFields = [
   driveAccessToken,
   kioskMode,
   settingsPin,
-  idleResetSeconds
+  idleResetSeconds,
+  countdownSeconds,
+  mirrorPreview,
+  showBrandOverlay,
+  showFramingGuides,
+  screenFlash
 ];
 
 let currentStream;
@@ -46,6 +61,7 @@ const isDesktopApp = Boolean(window.photoBooth);
 let selectedCameraId = "";
 let captureMode = "single";
 let idleResetTimer;
+let browserDirectoryHandle;
 
 function getSettings() {
   return JSON.parse(localStorage.getItem("photoBoothSettings") || "{}");
@@ -100,6 +116,12 @@ function loadSettings() {
   kioskMode.checked = saved.kioskMode !== false;
   settingsPin.value = saved.settingsPin || "1024";
   idleResetSeconds.value = String(saved.idleResetSeconds ?? 45);
+  countdownSeconds.value = String(saved.countdownSeconds ?? 3);
+  mirrorPreview.checked = Boolean(saved.mirrorPreview);
+  showBrandOverlay.checked = saved.showBrandOverlay !== false;
+  showFramingGuides.checked = saved.showFramingGuides !== false;
+  screenFlash.checked = saved.screenFlash !== false;
+  applyGuestDisplaySettings();
 }
 
 function persistSettings() {
@@ -115,15 +137,172 @@ function persistSettings() {
       driveAccessToken: driveAccessToken.value,
       kioskMode: kioskMode.checked,
       settingsPin: settingsPin.value,
-      idleResetSeconds: Number(idleResetSeconds.value) || 0
+      idleResetSeconds: Number(idleResetSeconds.value) || 0,
+      countdownSeconds: clampNumber(countdownSeconds.value, 1, 10, 3),
+      mirrorPreview: mirrorPreview.checked,
+      showBrandOverlay: showBrandOverlay.checked,
+      showFramingGuides: showFramingGuides.checked,
+      screenFlash: screenFlash.checked
     })
   );
+
+  applyGuestDisplaySettings();
 }
 
 settingsFields.forEach((field) => {
   field.addEventListener("input", persistSettings);
   field.addEventListener("change", persistSettings);
 });
+
+function clampNumber(value, min, max, fallback) {
+  const numeric = Number(value);
+
+  if (!Number.isFinite(numeric)) {
+    return fallback;
+  }
+
+  return Math.min(max, Math.max(min, numeric));
+}
+
+function browserFolderSupported() {
+  return !isDesktopApp && typeof window.showDirectoryPicker === "function" && window.isSecureContext;
+}
+
+function openBrowserStorage() {
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.open(browserStorageDbName, 1);
+
+    request.onupgradeneeded = () => {
+      request.result.createObjectStore(browserStorageStoreName);
+    };
+
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error);
+  });
+}
+
+async function setStoredBrowserFolder(handle) {
+  try {
+    const database = await openBrowserStorage();
+    const transaction = database.transaction(browserStorageStoreName, "readwrite");
+    transaction.objectStore(browserStorageStoreName).put(handle, browserFolderKey);
+    await new Promise((resolve, reject) => {
+      transaction.oncomplete = resolve;
+      transaction.onerror = () => reject(transaction.error);
+    });
+    database.close();
+  } catch (error) {
+    console.warn("Could not persist browser save folder.", error);
+  }
+}
+
+async function getStoredBrowserFolder() {
+  try {
+    const database = await openBrowserStorage();
+    const transaction = database.transaction(browserStorageStoreName, "readonly");
+    const request = transaction.objectStore(browserStorageStoreName).get(browserFolderKey);
+    const handle = await new Promise((resolve, reject) => {
+      request.onsuccess = () => resolve(request.result || null);
+      request.onerror = () => reject(request.error);
+    });
+    database.close();
+    return handle;
+  } catch (error) {
+    console.warn("Could not load browser save folder.", error);
+    return null;
+  }
+}
+
+async function verifyBrowserFolderPermission(handle, write = false) {
+  if (!handle?.queryPermission || !handle?.requestPermission) {
+    return false;
+  }
+
+  const mode = write ? "readwrite" : "read";
+  const currentPermission = await handle.queryPermission({ mode });
+  if (currentPermission === "granted") {
+    return true;
+  }
+
+  if (!write) {
+    return false;
+  }
+
+  return (await handle.requestPermission({ mode })) === "granted";
+}
+
+async function restoreBrowserFolder() {
+  if (!browserFolderSupported()) {
+    return;
+  }
+
+  const handle = await getStoredBrowserFolder();
+  if (!handle) {
+    saveFolder.value = "";
+    folderStatus.textContent = "Chrome can save directly to a selected folder.";
+    return;
+  }
+
+  browserDirectoryHandle = handle;
+  saveFolder.value = handle.name || "Selected Chrome folder";
+  const hasPermission = await verifyBrowserFolderPermission(handle);
+  openFolderButton.disabled = false;
+  openFolderButton.textContent = "Test Folder";
+  folderStatus.textContent = hasPermission
+    ? "Chrome folder restored and ready."
+    : "Chrome folder restored. Permission will be requested on the next save.";
+}
+
+async function chooseBrowserFolder() {
+  const handle = await window.showDirectoryPicker({
+    id: "photo-booth-save-folder",
+    mode: "readwrite",
+    startIn: "pictures"
+  });
+
+  const hasPermission = await verifyBrowserFolderPermission(handle, true);
+  if (!hasPermission) {
+    throw new Error("Chrome did not grant write permission for that folder.");
+  }
+
+  browserDirectoryHandle = handle;
+  saveFolder.value = handle.name || "Selected Chrome folder";
+  openFolderButton.disabled = false;
+  openFolderButton.textContent = "Test Folder";
+  folderStatus.textContent = "Chrome will save photos directly to this folder.";
+  persistSettings();
+  await setStoredBrowserFolder(handle);
+}
+
+async function writeBlobToBrowserFolder(blob, filename) {
+  if (!browserDirectoryHandle) {
+    throw new Error("No Chrome save folder selected.");
+  }
+
+  const hasPermission = await verifyBrowserFolderPermission(browserDirectoryHandle, true);
+  if (!hasPermission) {
+    throw new Error("Chrome needs folder permission before saving.");
+  }
+
+  const fileHandle = await browserDirectoryHandle.getFileHandle(filename, { create: true });
+  const writable = await fileHandle.createWritable();
+  await writable.write(blob);
+  await writable.close();
+  return browserDirectoryHandle.name || "selected Chrome folder";
+}
+
+async function testBrowserFolder() {
+  const blob = new Blob([`Photo Booth folder test ${new Date().toISOString()}\n`], { type: "text/plain" });
+  const filename = `photo-booth-folder-test-${new Date().toISOString().replace(/[:.]/g, "-")}.txt`;
+  const folderName = await writeBlobToBrowserFolder(blob, filename);
+  folderStatus.textContent = `Test file saved to ${folderName}.`;
+}
+
+function applyGuestDisplaySettings() {
+  document.body.classList.toggle("mirror-preview", mirrorPreview.checked);
+  document.body.classList.toggle("hide-brand-overlay", !showBrandOverlay.checked);
+  document.body.classList.toggle("hide-framing-guides", !showFramingGuides.checked);
+}
 
 openSettingsButton.addEventListener("click", openSettings);
 closeSettingsButton.addEventListener("click", closeSettings);
@@ -289,8 +468,9 @@ function sleep(ms) {
 async function runCountdown() {
   countdown.classList.add("is-visible");
 
-  for (const value of ["3", "2", "1"]) {
-    countdown.textContent = value;
+  const seconds = clampNumber(countdownSeconds.value, 1, 10, 3);
+  for (let value = seconds; value > 0; value -= 1) {
+    countdown.textContent = String(value);
     await sleep(700);
   }
 
@@ -298,6 +478,16 @@ async function runCountdown() {
   await sleep(300);
   countdown.classList.remove("is-visible");
   countdown.textContent = "";
+}
+
+async function flashScreen() {
+  if (!screenFlash.checked) {
+    return;
+  }
+
+  document.body.classList.add("screen-flash");
+  await sleep(140);
+  document.body.classList.remove("screen-flash");
 }
 
 function resetIdleTimer() {
@@ -334,7 +524,15 @@ function captureFrame() {
   captureCanvas.height = height;
   context.imageSmoothingEnabled = true;
   context.imageSmoothingQuality = "high";
-  context.drawImage(cameraPreview, 0, 0, width, height);
+
+  if (mirrorPreview.checked) {
+    context.translate(width, 0);
+    context.scale(-1, 1);
+    context.drawImage(cameraPreview, 0, 0, width, height);
+    context.setTransform(1, 0, 0, 1, 0, 0);
+  } else {
+    context.drawImage(cameraPreview, 0, 0, width, height);
+  }
 
   const pad = Math.round(Math.min(width, height) * 0.045);
   const titleSize = Math.round(Math.min(width, height) * 0.075);
@@ -376,6 +574,7 @@ async function captureStrip() {
     saveStatus.textContent = `Shot ${index + 1} of 3...`;
     await runCountdown();
     frames.push(captureFrame());
+    await flashScreen();
     await sleep(350);
   }
 
@@ -421,10 +620,17 @@ async function captureStrip() {
 }
 
 async function saveLocally(dataUrl) {
+  const filename = `${filenamePrefix.value || "wedding-photo"}-${new Date().toISOString().replace(/[:.]/g, "-")}.png`;
+
   if (!isDesktopApp) {
+    if (browserDirectoryHandle) {
+      const folderName = await writeBlobToBrowserFolder(dataUrlToBlob(dataUrl), filename);
+      return { path: `${folderName}/${filename}`, directory: folderName };
+    }
+
     const link = document.createElement("a");
     link.href = dataUrl;
-    link.download = `${filenamePrefix.value || "wedding-photo"}-${new Date().toISOString().replace(/[:.]/g, "-")}.png`;
+    link.download = filename;
     link.click();
     return { path: "Downloaded to the iPad/browser downloads folder.", directory: "" };
   }
@@ -505,6 +711,7 @@ async function captureAndSave() {
 
   try {
     const dataUrl = captureMode === "strip" ? await captureStrip() : await captureSingle();
+    await flashScreen();
     lastCaptureDataUrl = dataUrl;
     renderPhotoFrame(dataUrl);
 
@@ -554,12 +761,30 @@ retakeButton.addEventListener("click", resetGuestScreen);
 openFolderButton.addEventListener("click", async () => {
   if (lastSavedDirectory && isDesktopApp) {
     await window.photoBooth.openPath(lastSavedDirectory);
+    return;
+  }
+
+  if (browserDirectoryHandle) {
+    try {
+      await testBrowserFolder();
+    } catch (error) {
+      folderStatus.textContent = error.message;
+    }
   }
 });
 
 chooseFolderButton.addEventListener("click", async () => {
   if (!isDesktopApp) {
-    saveStatus.textContent = "On iPad, photos download through the browser. Use Files or Photos to move them later.";
+    if (browserFolderSupported()) {
+      try {
+        await chooseBrowserFolder();
+      } catch (error) {
+        folderStatus.textContent = error.name === "AbortError" ? "Folder selection cancelled." : error.message;
+      }
+      return;
+    }
+
+    folderStatus.textContent = "This browser saves through Downloads. Chrome on HTTPS can choose a folder.";
     return;
   }
 
@@ -599,10 +824,16 @@ if (window.location.hash === "#settings") {
 }
 
 if (!isDesktopApp) {
-  saveFolder.placeholder = "iPad/browser download location";
-  chooseFolderButton.disabled = true;
-  openFolderButton.textContent = "Downloads";
+  saveFolder.value = "";
+  saveFolder.placeholder = browserFolderSupported() ? "Chrome folder not selected" : "Browser downloads folder";
+  chooseFolderButton.disabled = !browserFolderSupported();
+  openFolderButton.textContent = browserFolderSupported() ? "Test Folder" : "Downloads";
+  folderStatus.textContent = browserFolderSupported()
+    ? "Chrome can save directly to a selected folder."
+    : "This browser saves photos through Downloads.";
 }
+
+restoreBrowserFolder();
 
 startCamera()
   .then(() => {
